@@ -1,10 +1,10 @@
 #include <Arduino.h>
-#include <WiFi.h>
 #include <HTTPClient.h>
 #include <DHT.h>
 #include <iostream>
 #include <string>
 #include <ArduinoJson.h>
+#include <WiFiManager.h>
 using namespace std;
 
 //Setup
@@ -18,9 +18,9 @@ void setup() {
   std::string friendlyName = "Hallway 1";
 //WiFi must be 2.4g
 //WiFi Network Name
-  const char wifiSSID[] = "iot7";
+  //const char wifiSSID[] = "iot7";
 //WiFi Password
-  const char wifiPASS[] = "aDayattherange69!";
+  //const char wifiPASS[] = "aDayattherange69!";
 //The address of your HomeAssistant server. Accepts DNS or IPv4
   const String homeAssistantFQDN = "docker2.int.h4rb.bid";
 //Web port of HomeAssistant. Default is 8123
@@ -35,15 +35,13 @@ void setup() {
 ////SETUP
   Serial.begin(9600);
   Serial.println();
-  WiFi.begin(wifiSSID,wifiPASS);
-  HTTPClient http;
-  DHT dht;
-  delay(1000);
-  if (WiFi.status() != 3) {
-    Serial.println("WiFi Error!!! Check config or wifi.");Serial.println(WiFi.status());
-    }
-  WiFi.setHostname("tempSensor");
-  dht.setup(dhtPIN);
+  WiFiManager wifiManager;
+  wifiManager.autoConnect(); //Launch self-hosted wifi to configure device
+  HTTPClient http; //Instantiate httpClient to send data to HomeAssistant server
+  DHT dht; //Instantiate Temperature Sensor. Supports DHT11/22 without any changes
+  delay(1000); //Wait 1 second for WiFi to connect
+  wifiManager.setHostname(hostname); //TODO - may be able toconfigure through web ui
+  dht.setup(dhtPIN); //Configure pin for use with Temperature Sensor
   Serial.println("Setup Done!");
 
 ////MAIN
@@ -51,9 +49,9 @@ void setup() {
 //Check temperature and humidity
   float humidity = dht.getHumidity();
   float tempC = dht.getTemperature();
-  float tempF = roundf(tempC*9/5+32);
+  float tempF = roundf(tempC*9/5+32); //Convert Celsius to Fahrenehit using MATH!
 //Build URL Strings
-  std::string connectURL ("http://");
+  std::string connectURL ("http://"); //Protocol - Does not support https:// currently
   connectURL.append(homeAssistantFQDN.c_str());
   connectURL.append(":");
   std::string homeAssistantPORTString = to_string(homeAssistantPORT);

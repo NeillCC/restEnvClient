@@ -53,5 +53,6 @@
         "iostream": "cpp"
     },
     "cmake.sourceDirectory": "C:/Users/ny/Documents/Programs/PlatformIO/restEnvClient/.pio/libdeps/upesy_wroom/ArduinoJson",
-    "cmake.configureOnOpen": true
+    "cmake.configureOnOpen": true,
+    "C_Cpp.default.compilerPath": "C:/Users/ny/.platformio/packages/toolchain-xtensa-esp32/bin/xtensa-esp32-elf-gcc.exe"
 }
