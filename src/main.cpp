@@ -1,7 +1,6 @@
 #include <Arduino.h>
 #include <HTTPClient.h>
 #include <DHT.h>
-#include <iostream>
 #include <string>
 #include <ArduinoJson.h>
 #include <WiFiManager.h>
@@ -16,11 +15,6 @@ void setup() {
   char hostname[] = "hall1";
 //Device friendly name. Like "Hallway 1"
   std::string friendlyName = "Hallway 1";
-//WiFi must be 2.4g
-//WiFi Network Name
-  //const char wifiSSID[] = "iot7";
-//WiFi Password
-  //const char wifiPASS[] = "aDayattherange69!";
 //The address of your HomeAssistant server. Accepts DNS or IPv4
   const String homeAssistantFQDN = "docker2.int.h4rb.bid";
 //Web port of HomeAssistant. Default is 8123
@@ -35,6 +29,7 @@ void setup() {
 ////SETUP
   Serial.begin(9600);
   Serial.println();
+//WiFi must be 2.4g
   WiFiManager wifiManager;
   wifiManager.autoConnect(); //Launch self-hosted wifi to configure device
   HTTPClient http; //Instantiate httpClient to send data to HomeAssistant server
