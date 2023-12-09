@@ -15,7 +15,7 @@ void saveConfigCallback() {
     //callback notifying us of the need to save config
     shouldSaveConfig = true;
   }
-char homeAssistantServer[40] = "homeassistant";
+char homeAssistantServer[40] = "homeassistant.local.tld";
 char homeAssistantPort[6] = "8123";
 char homeAssistantToken[200] = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiI2ZGE1ZDBkZTRhZGQ0ZDYwODRhM2I3NDNhNWFiNTYyMiIsImlhdCI6MTY5MTg5NTk2MCwiZXhwIjoyMDA3MjU1OTYwfQ.w44abWoDy-_fuA0oCJTDQXBWsGvKpzCR_p93KBu05bs";
 char hostname[16] = "hall1";
