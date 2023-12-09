@@ -31,7 +31,8 @@ void setup() {
   Serial.println();
 //WiFi must be 2.4g
   WiFiManager wifiManager;
-  wifiManager.autoConnect(); //Launch self-hosted wifi to configure device
+  wifiManager.autoConnect("ESP32_TempProbe","password"); //Launch self-hosted wifi to configure device
+  wifiManager.setConfigPortalTimeout(120); //Seconds before reset if Wifi is not available
   HTTPClient http; //Instantiate httpClient to send data to HomeAssistant server
   DHT dht; //Instantiate Temperature Sensor. Supports DHT11/22 without any changes
   delay(1000); //Wait 1 second for WiFi to connect
