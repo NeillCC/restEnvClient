@@ -28,7 +28,7 @@ void setup() {
 #pragma region Setup
 ////SETUP
   HTTPClient http; //Instantiate httpClient to send data to HomeAssistant server
-  int dhtPIN = 4; //Which pin is the DHT data on
+  int dhtPIN = 15; //Which pin is the DHT data on
   DHT dht; //Instantiate Temperature Sensor. Supports DHT11/22 without any changes
   Serial.begin(9600);
   Serial.println();
