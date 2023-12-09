@@ -83,6 +83,7 @@ void setup() {
   wifiManager.addParameter(&sleepSecondsWM); //Amount of seconds to sleep between server updates
   wifiManager.setConfigPortalTimeout(180); //Seconds before reset if Wifi is not available
   wifiManager.setSaveConfigCallback(saveConfigCallback);
+  wifiManager.setConnectRetries(3);
   wifiManager.setConnectTimeout(10);
   wifiManager.setHostname(hostnameWM.getValue());
   wifiManager.autoConnect("ESP32_TempProbe","password"); //Launch self-hosted wifi to configure device
