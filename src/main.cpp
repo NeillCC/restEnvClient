@@ -1,7 +1,9 @@
 #include <FS.h>                   //this needs to be first, or it all crashes and burns...
 #include <Arduino.h>              //Arduino Library
 #include <HTTPClient.h>           //For making HTTP requests/posts
-#include <DHT.h>                  //Temperature Sensor Library
+#include <Wire.h>                 //Serial I2C library
+#include <Adafruit_BME280.h>      //BME280 Library
+#include <Adafruit_Sensor.h>      //Adafruit Sensor methods - 
 #include <string>                 //For manipulating strings
 #include <ArduinoJson.h>          //For creating HTTP content and WiFiManager
 #include <WiFiManager.h>          //Save WiFi Connection and provide config webUI
@@ -22,17 +24,17 @@ char hostname[16] = "hall1";
 char friendlyName[30] = "Hallway 1";
 char sleepSeconds[4] = "5";
 #pragma endregion
-//Setup
-//All steps are run in setup to enable deep sleep
+#pragma region Setup //All steps are run in setup to enable deep sleep
 void setup() {
-#pragma region Setup
 ////SETUP
-  HTTPClient http; //Instantiate httpClient to send data to HomeAssistant server
-  int dhtPIN = 15; //Which pin is the DHT data on
-  DHT dht; //Instantiate Temperature Sensor. Supports DHT11/22 without any changes
+  HTTPClient http;              //Instantiate httpClient to send data to HomeAssistant server
+  int dhtPIN = 15;              //Which pin is the DHT data on
+  int buttonPIN = 4;            //Pin to use for reset button
+  int i2cSDA = 21;              //SDA Pin. ESP32 - 21
+  int i2cSCL = 22;              //SCL Pin. ESP32 - 22
+  float seaLevelHPA = 1013.25;  //
   Serial.begin(9600);
   Serial.println();
-  dht.setup(dhtPIN); //Configure pin for use with Temperature Sensor
 #pragma endregion
 #pragma region File System Read
   if (SPIFFS.begin(true)) {
@@ -98,11 +100,15 @@ void setup() {
   //delay(1000); //Wait 1 second for WiFi to connect
   Serial.println("Setup Done!");
 #pragma endregion
-#pragma region Temperature Checking
-//Check temperature and humidity
-  float humidity = dht.getHumidity();
-  float tempC = dht.getTemperature();
-  float tempF = roundf(tempC*9/5+32); //Convert Celsius to Fahrenehit using MATH!
+#pragma region Sensor Checks
+  TwoWire bmeI2C = TwoWire(0);                      //Create empty TwoWire
+  Adafruit_BME280 bme;                              //Create Empty BME object
+  bool bmeStatus;                                   //Create bool for TwoWire connection status
+  bmeI2C.begin(i2cSDA, i2cSCL, 100000);             //Begin TwoWire connection for I2C
+  bmeStatus = bme.begin(0x76, &bmeI2C);             //Connect to sensor on I2C address 0x76
+  float bmeTemperature = bme.readTemperature();     //Check Temperature. Returns Celsius
+  float humidity = bme.readHumidity();              //Read humidity from sensor
+  float hPa = bme.readPressure();                   //Read pressure from sensor
 #pragma endregion
 #pragma region URL Building
 //Build URL Strings
@@ -119,6 +125,7 @@ void setup() {
   std::string httpTempC (apiStateURL+"_Celsius");
   std::string httpTempF (apiStateURL+"_Fahrenheit");
   std::string httpHumidity (apiStateURL+"_Humidity");
+  std::string httpPressure (apiStateURL+"_Pressure");
 //HTTP method string
   std::string methodURL ("POST");
 //HTTP auth string
@@ -128,27 +135,33 @@ void setup() {
 #pragma region JSON
 //Create empty JSON doc
   DynamicJsonDocument httpPostJSONDoc(1024);
-//Generate JSON for temperature in celsius and move to char array
+//Generate JSON for bmeTemperature in celsius and move to char array
 //Static properties
   httpPostJSONDoc["attributes"]["unique_id"] = hostname;
 //Dynamic properties
-  httpPostJSONDoc["state"] = tempC;
+  httpPostJSONDoc["state"] = round(bmeTemperature*100)/100.00; //Read Celsius var and round to 2 decimal places
   httpPostJSONDoc["attributes"]["unit_of_measurement"] = "°C";
   httpPostJSONDoc["attributes"]["friendly_name"] = (string(friendlyName) + " Celsius");
   char celsiusPAYLOAD[256];
   serializeJson(httpPostJSONDoc,celsiusPAYLOAD);
-//Generate JSON for temperature in fahrenheit and move to char array
-  httpPostJSONDoc["state"] = tempF;
+//Generate JSON for bmeTemperature in fahrenheit and move to char array
+  httpPostJSONDoc["state"] = round((bmeTemperature*9/5+32)*100)/100.00; //Convert Celsius to Fahrenheit and round to 2 decimal places
   httpPostJSONDoc["attributes"]["unit_of_measurement"] = "°F";
   httpPostJSONDoc["attributes"]["friendly_name"] = (string(friendlyName) + " Fahrenheit").c_str();
   char fahrenheitPAYLOAD[256];
   serializeJson(httpPostJSONDoc,fahrenheitPAYLOAD);
 //Generate JSON for humidity
-  httpPostJSONDoc["state"] = humidity;
-  httpPostJSONDoc["attributes"]["unit_of_measurement"] = "humidity";
+  httpPostJSONDoc["state"] = round(humidity*100)/100.00;
+  httpPostJSONDoc["attributes"]["unit_of_measurement"] = "%";
   httpPostJSONDoc["attributes"]["friendly_name"] = (string(friendlyName) + " Humidity").c_str();
   char humidityPAYLOAD[256];
   serializeJson(httpPostJSONDoc,humidityPAYLOAD);
+//Generate JSON for pressure
+  httpPostJSONDoc["state"] = round(hPa)/100.00; //Pressure
+  httpPostJSONDoc["attributes"]["unit_of_measurement"] = "hPa";
+  httpPostJSONDoc["attributes"]["friendly_name"] = (string(friendlyName) + " Barometer").c_str();
+  char pressurePAYLOAD[256];
+  serializeJson(httpPostJSONDoc,pressurePAYLOAD);
 #pragma endregion
 #pragma region HTTP Posts
 //Celsius
@@ -168,7 +181,13 @@ void setup() {
   http.begin(httpHumidity.c_str());
   http.addHeader("Authorization",authToken.c_str());
   http.addHeader("Content-Type","application/json");
-  http.POST(humidityPAYLOAD); 
+  http.POST(humidityPAYLOAD);
+//Pressure
+  Serial.println("Attempting Pressure Connection...");
+  http.begin(httpPressure.c_str());
+  http.addHeader("Authorization",authToken.c_str());
+  http.addHeader("Content-Type","application/json");
+  http.POST(pressurePAYLOAD); 
 #pragma endregion
 #pragma region File System Save
   if (shouldSaveConfig) {
