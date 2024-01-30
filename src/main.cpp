@@ -159,17 +159,17 @@ void setup() {
 //Generate JSON for bmeTemperature in fahrenheit
   httpPostJSONDoc["state"] = round((bmeTemperature*9/5+32)*100)/100.00; //Convert Celsius to Fahrenheit and round to 2 decimal places
   httpPostJSONDoc["attributes"]["unit_of_measurement"] = "°F";
-  httpPostJSONDoc["attributes"]["friendly_name"] = (std::string(friendlyName) + " Fahrenheit").c_str();
+  httpPostJSONDoc["attributes"]["friendly_name"] = (std::string(friendlyName) + " Fahrenheit");
   celz.updateSensor(httpPostJSONDoc, httpTempF, authToken);
 //Generate JSON for humidity
   httpPostJSONDoc["state"] = round(humidity*100)/100.00;
   httpPostJSONDoc["attributes"]["unit_of_measurement"] = "%";
-  httpPostJSONDoc["attributes"]["friendly_name"] = (std::string(friendlyName) + " Humidity").c_str();
+  httpPostJSONDoc["attributes"]["friendly_name"] = (std::string(friendlyName) + " Humidity");
   celz.updateSensor(httpPostJSONDoc, httpHumidity, authToken);
 //Generate JSON for pressure
   httpPostJSONDoc["state"] = round(hPa)/100.00; //Pressure
   httpPostJSONDoc["attributes"]["unit_of_measurement"] = "hPa";
-  httpPostJSONDoc["attributes"]["friendly_name"] = (std::string(friendlyName) + " Barometer").c_str();
+  httpPostJSONDoc["attributes"]["friendly_name"] = (std::string(friendlyName) + " Barometer");
   celz.updateSensor(httpPostJSONDoc, httpPressure, authToken);
 #pragma endregion
 #pragma region File System Save
