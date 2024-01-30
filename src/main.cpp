@@ -133,13 +133,6 @@ void setup() {
   std::string apiStateURL (connectURL);
   apiStateURL.append("/api/states/sensor.");
   apiStateURL.append(hostname);
-//Build URLs
-  std::string httpTempC (apiStateURL+"_Celsius");
-  std::string httpTempF (apiStateURL+"_Fahrenheit");
-  std::string httpHumidity (apiStateURL+"_Humidity");
-  std::string httpPressure (apiStateURL+"_Pressure");
-//HTTP method string
-  std::string methodURL ("POST");
 //HTTP auth string
   std::string authToken ("Bearer ");
   authToken.append(homeAssistantToken);
@@ -155,21 +148,25 @@ void setup() {
   httpPostJSONDoc["state"] = round(bmeTemperature*100)/100.00; //Read Celsius var and round to 2 decimal places
   httpPostJSONDoc["attributes"]["unit_of_measurement"] = "°C";
   httpPostJSONDoc["attributes"]["friendly_name"] = (std::string(friendlyName) + " Celsius");
+  std::string httpTempC (apiStateURL+"_Celsius");
   celz.updateSensor(httpPostJSONDoc, httpTempC, authToken);
 //Generate JSON for bmeTemperature in fahrenheit
   httpPostJSONDoc["state"] = round((bmeTemperature*9/5+32)*100)/100.00; //Convert Celsius to Fahrenheit and round to 2 decimal places
   httpPostJSONDoc["attributes"]["unit_of_measurement"] = "°F";
   httpPostJSONDoc["attributes"]["friendly_name"] = (std::string(friendlyName) + " Fahrenheit");
+  std::string httpTempF (apiStateURL+"_Fahrenheit");
   celz.updateSensor(httpPostJSONDoc, httpTempF, authToken);
 //Generate JSON for humidity
   httpPostJSONDoc["state"] = round(humidity*100)/100.00;
   httpPostJSONDoc["attributes"]["unit_of_measurement"] = "%";
   httpPostJSONDoc["attributes"]["friendly_name"] = (std::string(friendlyName) + " Humidity");
+  std::string httpHumidity (apiStateURL+"_Humidity");
   celz.updateSensor(httpPostJSONDoc, httpHumidity, authToken);
 //Generate JSON for pressure
   httpPostJSONDoc["state"] = round(hPa)/100.00; //Pressure
   httpPostJSONDoc["attributes"]["unit_of_measurement"] = "hPa";
   httpPostJSONDoc["attributes"]["friendly_name"] = (std::string(friendlyName) + " Barometer");
+  std::string httpPressure (apiStateURL+"_Pressure");
   celz.updateSensor(httpPostJSONDoc, httpPressure, authToken);
 #pragma endregion
 #pragma region File System Save
