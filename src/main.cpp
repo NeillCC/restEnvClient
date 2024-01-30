@@ -1,20 +1,35 @@
+#pragma region Include Statements
 #include <FS.h>                   //this needs to be first, or it all crashes and burns...
-#include <Arduino.h>              //Arduino Library
 #include <HTTPClient.h>           //For making HTTP requests/posts
 #include <Wire.h>                 //Serial I2C library
 #include <Adafruit_BME280.h>      //BME280 Library
-#include <Adafruit_Sensor.h>      //Adafruit Sensor methods - 
-#include <string>                 //For manipulating strings
 #include <ArduinoJson.h>          //For creating HTTP content and WiFiManager
 #include <WiFiManager.h>          //Save WiFi Connection and provide config webUI
 #ifdef ESP32
   #include <SPIFFS.h>             //For saving WiFiManager files
 #endif
 using namespace std;
+#pragma endregion
+#pragma region Custom Classes
+class haUpdate {
+  public:
+    void updateSensor(DynamicJsonDocument httpPayload, string httpURL, std::string authToken) {
+      DynamicJsonDocument httpPostJSONDoc(256); //TODO make smaller?
+      char charPayload[128];
+      HTTPClient http;
+      serializeJson(httpPayload,charPayload);
+      http.begin(httpURL.c_str());
+      http.addHeader("Authorization",authToken.c_str());
+      http.addHeader("Content-Type","application/json");
+      http.POST(charPayload);
+      http.end();
+    }
+};
+#pragma endregion
 #pragma region WiFiManager globals
 bool shouldSaveConfig = false; //For WiFiManager
 void saveConfigCallback() {
-    //callback notifying us of the need to save config
+    //callback notifying us of the need to save config from webUI
     shouldSaveConfig = true;
   }
 char homeAssistantServer[40] = "homeassistant.local.tld";
@@ -48,9 +63,7 @@ void setup() {
         size_t size = configFile.size();
         // Allocate a buffer to store contents of the file.
         std::unique_ptr<char[]> buf(new char[size]);
-
         configFile.readBytes(buf.get(), size);
-
         DynamicJsonDocument json(1024);
         auto deserializeError = deserializeJson(json, buf.get());
         strcpy(homeAssistantServer, json["homeAssistantServer"]);
@@ -115,7 +128,6 @@ void setup() {
   std::string connectURL ("http://"); //Protocol - Does not support https:// currently
   connectURL.append(homeAssistantServer);
   connectURL.append(":");
-  //std::string homeAssistantPORTString = to_string(homeAssistantPORT);
   connectURL.append(homeAssistantPort);
 //Build API Strings
   std::string apiStateURL (connectURL);
@@ -133,61 +145,32 @@ void setup() {
   authToken.append(homeAssistantToken);
 #pragma endregion
 #pragma region JSON
+  haUpdate celz;
 //Create empty JSON doc
-  DynamicJsonDocument httpPostJSONDoc(1024);
+  DynamicJsonDocument httpPostJSONDoc(256);  //TODO make smaller?
 //Generate JSON for bmeTemperature in celsius and move to char array
 //Static properties
   httpPostJSONDoc["attributes"]["unique_id"] = hostname;
 //Dynamic properties
   httpPostJSONDoc["state"] = round(bmeTemperature*100)/100.00; //Read Celsius var and round to 2 decimal places
   httpPostJSONDoc["attributes"]["unit_of_measurement"] = "°C";
-  httpPostJSONDoc["attributes"]["friendly_name"] = (string(friendlyName) + " Celsius");
-  char celsiusPAYLOAD[256];
-  serializeJson(httpPostJSONDoc,celsiusPAYLOAD);
-//Generate JSON for bmeTemperature in fahrenheit and move to char array
+  httpPostJSONDoc["attributes"]["friendly_name"] = (std::string(friendlyName) + " Celsius");
+  celz.updateSensor(httpPostJSONDoc, httpTempC, authToken);
+//Generate JSON for bmeTemperature in fahrenheit
   httpPostJSONDoc["state"] = round((bmeTemperature*9/5+32)*100)/100.00; //Convert Celsius to Fahrenheit and round to 2 decimal places
   httpPostJSONDoc["attributes"]["unit_of_measurement"] = "°F";
-  httpPostJSONDoc["attributes"]["friendly_name"] = (string(friendlyName) + " Fahrenheit").c_str();
-  char fahrenheitPAYLOAD[256];
-  serializeJson(httpPostJSONDoc,fahrenheitPAYLOAD);
+  httpPostJSONDoc["attributes"]["friendly_name"] = (std::string(friendlyName) + " Fahrenheit").c_str();
+  celz.updateSensor(httpPostJSONDoc, httpTempF, authToken);
 //Generate JSON for humidity
   httpPostJSONDoc["state"] = round(humidity*100)/100.00;
   httpPostJSONDoc["attributes"]["unit_of_measurement"] = "%";
-  httpPostJSONDoc["attributes"]["friendly_name"] = (string(friendlyName) + " Humidity").c_str();
-  char humidityPAYLOAD[256];
-  serializeJson(httpPostJSONDoc,humidityPAYLOAD);
+  httpPostJSONDoc["attributes"]["friendly_name"] = (std::string(friendlyName) + " Humidity").c_str();
+  celz.updateSensor(httpPostJSONDoc, httpHumidity, authToken);
 //Generate JSON for pressure
   httpPostJSONDoc["state"] = round(hPa)/100.00; //Pressure
   httpPostJSONDoc["attributes"]["unit_of_measurement"] = "hPa";
-  httpPostJSONDoc["attributes"]["friendly_name"] = (string(friendlyName) + " Barometer").c_str();
-  char pressurePAYLOAD[256];
-  serializeJson(httpPostJSONDoc,pressurePAYLOAD);
-#pragma endregion
-#pragma region HTTP Posts
-//Celsius
-  Serial.println("Attempting Celsius Connection...");
-  http.begin(httpTempC.c_str());
-  http.addHeader("Authorization",authToken.c_str());
-  http.addHeader("Content-Type","application/json");
-  http.POST(celsiusPAYLOAD);
-//Fahrenheit
-  Serial.println("Attempting Farhrenheit Connection...");
-  http.begin(httpTempF.c_str());
-  http.addHeader("Authorization",authToken.c_str());
-  http.addHeader("Content-Type","application/json");
-  http.POST(fahrenheitPAYLOAD);
-//Humidity
-  Serial.println("Attempting Humidity Connection...");
-  http.begin(httpHumidity.c_str());
-  http.addHeader("Authorization",authToken.c_str());
-  http.addHeader("Content-Type","application/json");
-  http.POST(humidityPAYLOAD);
-//Pressure
-  Serial.println("Attempting Pressure Connection...");
-  http.begin(httpPressure.c_str());
-  http.addHeader("Authorization",authToken.c_str());
-  http.addHeader("Content-Type","application/json");
-  http.POST(pressurePAYLOAD); 
+  httpPostJSONDoc["attributes"]["friendly_name"] = (std::string(friendlyName) + " Barometer").c_str();
+  celz.updateSensor(httpPostJSONDoc, httpPressure, authToken);
 #pragma endregion
 #pragma region File System Save
   if (shouldSaveConfig) {
@@ -218,7 +201,8 @@ void setup() {
   esp_deep_sleep(atoi(sleepSeconds)*1000000); //Deep sleep
 #pragma endregion
 } //End Setup
-
+#pragma region LOOP
 void loop () {
 
 }
+#pragma endregion
